@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Matching Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Sarabun', 'Inter', 'sans-serif'] },
+                    colors: { primary: '#1D4ED8', secondary: '#047857', dark: '#1F2937', light: '#F3F4F6' }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { background-color: #F9FAFB; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        
+        /* Custom modal overlay */
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); }
+    </style>
+</head>
+<body class="text-gray-800 antialiased bg-gray-50 flex flex-col h-screen overflow-hidden">
+
+    <!-- Authentication Container -->
+    <div id="authContainer" class="absolute inset-0 flex items-center justify-center bg-gray-50 z-[100] p-4 overflow-y-auto">
+        <!-- Auth content will be injected here -->
+    </div>
+
+    <!-- Main Application Container -->
+    <div id="appContainer" class="flex flex-col h-full w-full hidden">
+        <!-- Header -->
+        <header class="bg-dark text-white p-4 shadow-md z-50 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-3">
+                <img src="jobs4all.png" alt="Our figure" class="w-12 h-12 object-contain">
+                <h1 class="text-xl font-bold hidden sm:block tracking-wide">Jobs For All</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
+                    <span class="text-sm text-gray-400">บทบาท</span>
+                    <select id="roleSelector" onchange="switchRole(this.value)" class="bg-transparent text-white text-sm font-medium outline-none cursor-pointer">
+                        <option value="employee">👨‍🦽 คนพิการ (Job Seeker)</option>
+                        <option value="employer">🏢 ผู้ประกอบการ (Employer)</option>
+                        <option value="admin">🛡️ ผู้ดูแลระบบ (Admin)</option>
+                    </select>
+                </div>
+                <!-- Mobile Role Selector Toggle -->
+                <button onclick="toggleMobileRoleSelector()" class="md:hidden text-gray-300 hover:text-white">
+                     <i class="fas fa-user-cog text-xl"></i>
+                </button>
+                <div class="w-px h-6 bg-gray-700 hidden md:block"></div>
+                <button onclick="logoutSystem()" class="text-gray-300 hover:text-red-400 transition flex items-center gap-2 text-sm font-medium">
+                    <i class="fas fa-sign-out-alt"></i> <span class="hidden sm:inline">ออกจากระบบ</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Mobile Role Selector Dropdown (Hidden by default) -->
+        <div id="mobileRoleSelector" class="hidden bg-gray-800 p-3 border-t border-gray-700 shrink-0">
+             <label class="block text-xs text-gray-400 mb-1">สลับมุมมอง:</label>
+             <select onchange="switchRole(this.value); toggleMobileRoleSelector();" class="w-full bg-gray-700 text-white rounded p-2 text-sm outline-none">
+                 <option value="employee">👨‍🦽 คนพิการ</option>
+                 <option value="employer">🏢 ผู้ประกอบการ</option>
+                 <option value="admin">🛡️ ผู้ดูแลระบบ</option>
+             </select>
+        </div>
+
+        <div class="flex flex-1 overflow-hidden relative">
+            <!-- Mobile Menu Toggle Button -->
+            <button onclick="toggleSidebar()" class="md:hidden absolute bottom-4 right-4 bg-primary text-white w-12 h-12 rounded-full shadow-lg z-50 flex items-center justify-center hover:bg-blue-700 transition">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+
+            <!-- Sidebar -->
+            <aside id="sidebar" class="w-64 bg-white shadow-xl flex flex-col z-40 border-r border-gray-100 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out shrink-0">
+                <div class="p-6 border-b border-gray-100 flex items-center gap-4 bg-gray-50 shrink-0">
+                    <div id="userAvatar" class="w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-sm"></div>
+                    <div class="overflow-hidden">
+                        <h2 id="userName" class="font-bold text-gray-800 truncate">ชื่อผู้ใช้</h2>
+                        <p id="userRoleText" class="text-xs text-gray-500 truncate">บทบาท</p>
+                    </div>
+                </div>
+                <nav id="navMenu" class="flex-1 overflow-y-auto py-2 custom-scrollbar"></nav>
+            </aside>
+            
+            <!-- Sidebar Overlay for Mobile -->
+            <div id="sidebarOverlay" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"></div>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 relative custom-scrollbar" id="mainContent"></main>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-[200] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Custom Modal Container -->
+    <div id="modalContainer" class="hidden fixed inset-0 z-[150] modal-overlay flex items-center justify-center p-4">
+        <div id="modalContent" class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 transform scale-95 opacity-0 transition-all duration-300">
+            <!-- Modal content injected here -->
+        </div>
+    </div>
+
+    <script>
+        // Mock Data for the application
+        const MOCK_DATA = {
+            currentUser: { 
+                id: 'EMP01', 
+                name: 'คุณสุภชาญ ตรัยตรึงศ์สกุล', 
+                disability: 'ทางการได้ยิน', 
+                skills: ['Data Entry', 'Microsoft Office', 'Customer Service'],
+                matchScore: 85
+            },
+            employerUser: {
+                name: 'บริษัท เทคอินโนเวชั่น จำกัด',
+                contact: 'คุณวิมล'
+            },
+            jobs: [
+                { id: 'J01', title: 'เจ้าหน้าที่บันทึกข้อมูล (Data Entry)', company: 'บริษัท เทคอินโนเวชั่น จำกัด', location: 'กรุงเทพฯ / WFH', type: 'Full-time', salary: '15,000 - 20,000', reqDisability: ['การเคลื่อนไหว', 'การได้ยิน'], accommodations: ['Work from Home', 'ทางลาด', 'ลิฟต์กว้าง'], status: 'active', applicants: 3 },
+                { id: 'J02', title: 'พนักงานบริการลูกค้า (Call Center)', company: 'Telco Service Co.', location: 'เชียงใหม่', type: 'Full-time', salary: '12,000 - 18,000', reqDisability: ['การมองเห็น', 'การเคลื่อนไหว'], accommodations: ['Screen Reader Software', 'หูฟังตัดเสียงรบกวน'], status: 'active', applicants: 5 },
+                { id: 'J03', title: 'Graphic Designer', company: 'Creative Agency', location: 'กรุงเทพฯ', type: 'Part-time', salary: 'ตามตกลง', reqDisability: ['การได้ยิน', 'การเคลื่อนไหว'], accommodations: ['ล่ามภาษามือออนไลน์', 'ทางลาด'], status: 'pending', applicants: 0 }
+            ],
+            applications: [
+                { id: 'A01', jobId: 'J01', applicantName: 'คุณสุภชาญ ตรัยตรึงศ์สกุล', matchScore: 92, status: 'interview' },
+                { id: 'A02', jobId: 'J02', applicantName: 'คุณสุภชาญ ตรัยตรึงศ์สกุล', matchScore: 65, status: 'pending' },
+                { id: 'A03', jobId: 'J01', applicantName: 'คุณวิชัย แสงทอง', matchScore: 78, status: 'pending' }
+            ],
+            learningMedia: [
+                { id: 'L01', title: 'เทคนิคการสัมภาษณ์งานออนไลน์อย่างมั่นใจ', type: 'Video', length: '15 mins', category: 'Soft Skills' },
+                { id: 'L02', title: 'การใช้งานโปรแกรมตารางคำนวณเบื้องต้น (Excel)', type: 'Course', length: '2 hrs', category: 'Hard Skills' },
+                { id: 'L03', title: 'สิทธิประโยชน์คนพิการในสถานที่ทำงาน', type: 'Article', length: '5 mins read', category: 'Knowledge' }
+            ]
+        };
+
+        let currentRole = 'employee';
+        let currentMenu = 'home';
+        let isSidebarOpen = false;
+
+        // Navigation Configuration based on Role
+        const NAV_CONFIG = {
+            employee: [
+                { id: 'home', icon: 'fa-home', label: 'หน้าหลัก (Dashboard)' },
+                { id: 'search_job', icon: 'fa-search', label: 'ค้นหางาน' },
+                { id: 'my_work', icon: 'fa-briefcase', label: 'งานที่สมัคร' },
+                { id: 'assessment', icon: 'fa-clipboard-list', label: 'แบบประเมินบุคลิกภาพ/ทักษะ' },
+                { id: 'learning', icon: 'fa-graduation-cap', label: 'ทักษะที่ต้องเพิ่มเติม' },
+                { id: 'job_coaching', icon: 'fa-chalkboard-teacher', label: 'ผู้ฝึกสอนงาน' },
+                { id: 'setting', icon: 'fa-cog', label: 'ตั้งค่าข้อมูลส่วนตัว' }
+            ],
+            employer: [
+                { id: 'home', icon: 'fa-chart-pie', label: 'หน้าหลัก (Dashboard)' },
+                { id: 'create_job', icon: 'fa-plus-circle', label: 'สร้างประกาศงาน' },
+                { id: 'job_list', icon: 'fa-list', label: 'จัดการประกาศงาน' },
+                { id: 'applicant_list', icon: 'fa-users', label: 'รายชื่อผู้สมัคร' },
+                { id: 'search_employee', icon: 'fa-search', label: 'ค้นหาพนักงาน' },
+                { id: 'setting', icon: 'fa-building', label: 'ตั้งค่าบริษัท' }
+            ],
+            admin: [
+                { id: 'dashboard', icon: 'fa-tachometer-alt', label: 'ภาพรวมระบบ' },
+                { id: 'job_pending', icon: 'fa-clipboard-check', label: 'ตรวจสอบประกาศงาน' },
+                { id: 'user_list', icon: 'fa-users-cog', label: 'จัดการผู้ใช้งาน' },
+                { id: 'learning_media', icon: 'fa-book-open', label: 'จัดการสื่อการเรียนรู้' },
+                { id: 'system_setting', icon: 'fa-cogs', label: 'ตั้งค่าระบบ' }
+            ]
+        };
+
+        function initApp() {
+            document.getElementById('authContainer').classList.remove('hidden');
+            document.getElementById('appContainer').classList.add('hidden');
+            renderLogin();
+        }
+
+        function loginSystem(role) {
+            document.getElementById('authContainer').classList.add('hidden');
+            document.getElementById('appContainer').classList.remove('hidden');
+            
+            // Set role selector to match
+            document.getElementById('roleSelector').value = role;
+            
+            // Initialize app with selected role
+            switchRole(role);
+        }
+
+        function logoutSystem() {
+            showToast('ออกจากระบบเรียบร้อย', 'info');
+            setTimeout(() => {
+                initApp();
+            }, 800);
+        }
+
+        function switchRole(role) {
+            currentRole = role;
+            currentMenu = (role === 'admin') ? 'dashboard' : 'home';
+            
+            updateSidebarProfile();
+            renderSidebarMenu();
+            renderContent();
+            
+            // Close sidebar on mobile after switching role
+            if (isSidebarOpen) toggleSidebar();
+        }
+
+        function setMenu(menuId) {
+            currentMenu = menuId;
+            renderSidebarMenu();
+            renderContent();
+            
+            // Close sidebar on mobile after clicking menu
+            if (window.innerWidth < 768 && isSidebarOpen) {
+                toggleSidebar();
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            isSidebarOpen = !isSidebarOpen;
+            
+            if (isSidebarOpen) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+        
+        function toggleMobileRoleSelector() {
+            const selector = document.getElementById('mobileRoleSelector');
+            selector.classList.toggle('hidden');
+        }
+
+        function renderLogin() {
+            const container = document.getElementById('authContainer');
+            container.innerHTML = `
+                <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md fade-in border border-gray-100">
+                    <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                        <img src="jobs4all.png" alt="Our figure" class="w-full h-full object-cover">
+                    </div>
+                        <h2 class="text-2xl font-bold text-gray-800">Jobs for ALL</h2>
+                        <p class="text-gray-500 text-sm mt-1">Job Matching Platform</p>
+                    </div>
+                    
+                    <div class="mb-6 bg-gray-50 p-6 rounded-xl border border-gray-100">
+                        <!--
+                        <h3 class="text-lg font-bold text-gray-800 mb-1 border-b pb-2">โมดูล "บัญชี"</h3>
+                        -->
+                        <p class="text-gray-500 text-sm mb-4">เข้าสู่ระบบสำหรับผู้ที่มีบัญชีแล้ว</p>
+                        <form onsubmit="event.preventDefault(); loginSystem('employee');" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">อีเมล / ชื่อผู้ใช้</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-envelope text-gray-400"></i></div>
+                                    <input type="text" class="w-full border border-gray-300 rounded-lg pl-10 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition" placeholder="example@email.com">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-lock text-gray-400"></i></div>
+                                    <input type="password" class="w-full border border-gray-300 rounded-lg pl-10 px-4 py-2 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition" placeholder="••••••••">
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full bg-primary text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 shadow-md transition flex justify-center items-center gap-2">
+                                <span>เข้าสู่ระบบ</span> <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="text-center pt-2">
+                        <!--
+                            <h3 class="text-md font-bold text-gray-800 mb-1">โมดูล "คนใหม่"</h3>
+                        -->
+                            <p class="text-gray-500 text-sm mb-3">ยังไม่มีบัญชีใช่หรือไม่?</p>
+                        <button onclick="renderSelectRole()" class="w-full bg-white text-dark border-2 border-dark font-bold py-2.5 rounded-lg hover:bg-gray-50 transition">
+                            ลงทะเบียนสร้างบัญชีใหม่
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSelectRole() {
+            const container = document.getElementById('authContainer');
+            container.innerHTML = `
+                <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl fade-in border border-gray-100">
+                    <div class="text-center mb-8">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">เลือกบทบาท</h2>
+                        <!--
+                        <p class="text-gray-500">กรุณาเลือกบทบาทผู้ใช้งานที่ต้องการลงทะเบียน</p>
+                        -->
+                        </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Employee Role -->
+                        <div onclick="renderRegisterEmployee()" class="cursor-pointer border-2 border-gray-200 hover:border-primary rounded-xl p-6 text-center hover:bg-blue-50 transition group bg-white shadow-sm hover:shadow-md">
+                            <div class="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition duration-300 shadow-inner">
+                                <i class="fas fa-wheelchair text-3xl text-primary"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800">ผู้พิการ (Job Seeker)</h3>
+                            <!--
+                            <p class="text-sm text-gray-500 mt-2">ต้องการสร้างโปรไฟล์ หางาน และทำแบบประเมินทักษะ</p>
+                            -->
+                            </div>
+                        
+                        <!-- Employer Role -->
+                        <div onclick="renderRegisterEmployer()" class="cursor-pointer border-2 border-gray-200 hover:border-secondary rounded-xl p-6 text-center hover:bg-emerald-50 transition group bg-white shadow-sm hover:shadow-md">
+                            <div class="w-20 h-20 mx-auto bg-emerald-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition duration-300 shadow-inner">
+                                <i class="fas fa-building text-3xl text-secondary"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800">ผู้ประกอบการ (Employer)</h3>
+                            <!--
+                                <p class="text-sm text-gray-500 mt-2">ต้องการสร้างประกาศงานและค้นหาพนักงานที่เหมาะสม</p>
+                            -->
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 text-center border-t border-gray-100 pt-6">
+                        <button onclick="renderLogin()" class="text-gray-500 hover:text-gray-800 font-medium transition flex items-center justify-center gap-2 mx-auto">
+                            <i class="fas fa-arrow-left"></i> กลับหน้าเข้าสู่ระบบ
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRegisterEmployer() {
+            const container = document.getElementById('authContainer');
+            container.innerHTML = `
+                <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl fade-in border border-gray-100">
+                    <div class="flex items-center gap-3 mb-6 border-b pb-4">
+                        <div class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-secondary"><i class="fas fa-building"></i></div>
+                        <h2 class="text-2xl font-bold text-gray-800">โมดูล "รายละเอียดผู้ประกอบการ"</h2>
+                    </div>
+                    
+                    <form onsubmit="event.preventDefault(); showToast('ลงทะเบียนบริษัทสำเร็จ! กรุณารอการตรวจสอบ', 'success'); loginSystem('employer');" class="space-y-5">
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                            <h3 class="font-bold text-gray-700 mb-4"><i class="fas fa-info-circle mr-2 text-secondary"></i>ข้อมูลองค์กร</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm mb-1 font-medium text-gray-700">ชื่อบริษัท / องค์กร *</label>
+                                    <input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-secondary focus:ring-1 focus:ring-secondary" required placeholder="เช่น บริษัท ตัวอย่าง จำกัด">
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm mb-1 font-medium text-gray-700">เลขประจำตัวผู้เสียภาษี *</label>
+                                        <input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-secondary focus:ring-1 focus:ring-secondary" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm mb-1 font-medium text-gray-700">ประเภทธุรกิจ</label>
+                                        <select class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-secondary focus:ring-1 focus:ring-secondary">
+                                            <option>เทคโนโลยีสารสนเทศ (IT)</option>
+                                            <option>การผลิต</option>
+                                            <option>บริการ / ค้าปลีก</option>
+                                            <option>อื่นๆ</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                            <h3 class="font-bold text-gray-700 mb-4"><i class="fas fa-user-tie mr-2 text-secondary"></i>ข้อมูลผู้ติดต่อ</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm mb-1 font-medium text-gray-700">ชื่อผู้ติดต่อ *</label>
+                                    <input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-secondary" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm mb-1 font-medium text-gray-700">ตำแหน่ง</label>
+                                    <input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-secondary">
+                                </div>
+                                <div>
+                                    <label class="block text-sm mb-1 font-medium text-gray-700">เบอร์โทรศัพท์ *</label>
+                                    <input type="tel" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-secondary" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm mb-1 font-medium text-gray-700">อีเมล (สำหรับเข้าสู่ระบบ) *</label>
+                                    <input type="email" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-secondary" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center pt-4 mt-6">
+                            <button type="button" onclick="renderSelectRole()" class="text-gray-500 font-medium hover:text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">ย้อนกลับ</button>
+                            <button type="submit" class="bg-secondary text-white font-bold py-2.5 px-8 rounded-lg hover:bg-emerald-700 shadow transition">ลงทะเบียน</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        function renderRegisterEmployee() {
+            const container = document.getElementById('authContainer');
+            
+            const jobOptions = [
+                "งานบริหารและบริหารจัดการ", "งานวิศวกรรมและเทคโนโลยี", "งานการเงินและการบัญชี",
+                "งานธุรกิจและการตลาด", "งานด้านบริการลูกค้าและการสื่อสาร", "งานด้านการศึกษาและการฝึกอบรม",
+                "งานด้านการแพทย์และสุขภาพ", "งานด้านศิลปะและสร้างสรรค์", "งานด้านบริการสังคมและองค์กรการกุศล",
+                "งานด้านเกษตรและการเกษตร"
+            ].map(job => `<option value="${job}">${job}</option>`).join('');
+
+            container.innerHTML = `
+                <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-4xl fade-in my-8 border border-gray-100 relative">
+                    
+                    <div class="sticky top-0 bg-white z-10 pb-4 mb-6 border-b border-gray-100 flex items-center justify-between">
+                         
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-primary"><i class="fas fa-user"></i></div>
+                           
+                            <h2 class="text-2xl font-bold text-gray-800">โมดูล "รายละเอียดผู้พิการ"</h2>
+                            
+                            </div>
+                        
+                        <button onclick="renderSelectRole()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+                    </div>
+                    
+                    <form onsubmit="event.preventDefault(); showToast('สร้างโปรไฟล์สำเร็จ! ยินดีต้อนรับ', 'success'); loginSystem('employee');" class="space-y-8">
+                        
+                        <!-- 1. ข้อมูลทั่วไป -->
+                        <section class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-address-card text-primary"></i> ข้อมูลทั่วไป</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label class="block text-sm mb-1 font-medium text-gray-700">คำนำหน้า (Dropdown)</label>
+                                    <select class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"><option>นาย</option><option>นางสาว</option><option>นาง</option></select>
+                                </div>
+                                <div class="md:col-span-1"><label class="block text-sm mb-1 font-medium text-gray-700">ชื่อ (Text) *</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white" required></div>
+                                <div class="md:col-span-1"><label class="block text-sm mb-1 font-medium text-gray-700">นามสกุล (Text) *</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white" required></div>
+                                <div><label class="block text-sm mb-1 font-medium text-gray-700">วันเกิด (Calendar)</label><input type="date" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white" required></div>
+                            </div>
+                        </section>
+
+                        <!-- 2. โมดูลที่อยู่ -->
+                        <section class="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                            <h3 class="text-lg font-bold text-primary mb-4 flex items-center gap-2"><i class="fas fa-map-marker-alt"></i> โมดูล "ที่อยู่" (ที่พักปัจจุบัน)</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div><label class="block text-sm mb-1 font-medium text-gray-700">บ้านเลขที่</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"></div>
+                                <div><label class="block text-sm mb-1 font-medium text-gray-700">อาคาร</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"></div>
+                                <div><label class="block text-sm mb-1 font-medium text-gray-700">ซอย</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"></div>
+                                <div><label class="block text-sm mb-1 font-medium text-gray-700">หมู่บ้าน</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"></div>
+                                <div><label class="block text-sm mb-1 font-medium text-gray-700">ตำบล/เขต</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"></div>
+                                <div><label class="block text-sm mb-1 font-medium text-gray-700">อำเภอ/แขวง</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"></div>
+                                <div>
+                                    <label class="block text-sm mb-1 font-medium text-gray-700">จังหวัด (Dropdown)</label>
+                                    <select class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white">
+                                        <option value="">เลือกจังหวัด</option><option>กรุงเทพมหานคร</option><option>เชียงใหม่</option><option>ขอนแก่น</option>
+                                    </select>
+                                </div>
+                                <div><label class="block text-sm mb-1 font-medium text-gray-700">รหัสไปรษณีย์</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"></div>
+                            </div>
+                        </section>
+
+                        <!-- 3. การติดต่อและความพิการ -->
+                        <section class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-wheelchair text-primary"></i> การติดต่อ และ ข้อมูลความพิการ</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="space-y-4">
+                                    <div><label class="block text-sm mb-1 font-medium text-gray-700">เบอร์โทรศัพท์ *</label><input type="tel" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white" required></div>
+                                    <div><label class="block text-sm mb-1 font-medium text-gray-700">Email (สำหรับล็อกอิน) *</label><input type="email" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white" required></div>
+                                    <div><label class="block text-sm mb-1 font-medium text-gray-700">รหัสผ่าน *</label><input type="password" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white" required></div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div><label class="block text-sm mb-1 font-medium text-gray-700">เลขประจำตัวผู้พิการ</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"></div>
+                                        <div><label class="block text-sm mb-1 font-medium text-gray-700">ผู้ดูแล (ถ้ามี)</label><input type="text" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white"></div>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm mb-2 font-medium text-gray-700">ประเภทความพิการ (Radio Button)</label>
+                                        <div class="space-y-2 border border-gray-300 p-4 rounded-lg bg-white">
+                                            <label class="flex items-center gap-3 p-1 hover:bg-gray-50 rounded cursor-pointer"><input type="radio" name="disability" class="w-4 h-4 text-primary"> ทางการเห็น</label>
+                                            <label class="flex items-center gap-3 p-1 hover:bg-gray-50 rounded cursor-pointer"><input type="radio" name="disability" class="w-4 h-4 text-primary"> ทางการได้ยิน</label>
+                                            <label class="flex items-center gap-3 p-1 hover:bg-gray-50 rounded cursor-pointer"><input type="radio" name="disability" class="w-4 h-4 text-primary" checked> ทางการเคลื่อนไหว</label>
+                                            <label class="flex items-center gap-3 p-1 hover:bg-gray-50 rounded cursor-pointer"><input type="radio" name="disability" class="w-4 h-4 text-primary"> อื่นๆ</label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm mb-1 font-medium text-gray-700">สิทธิ์ในการรักษาพยาบาล (Dropdown)</label>
+                                        <select class="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-primary bg-white">
+                                            <option>สิทธิ์ผู้พิการ (ท74)</option>
+                                            <option>ประกันสังคม</option>
+                                            <option>บัตรทอง (30 บาท)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- 4. งานที่สนใจและเอกสาร -->
+                        <section class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-briefcase text-primary"></i> ข้อมูลการทำงานและเอกสารแนบ</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm mb-1 font-medium text-gray-700">ตำแหน่งงานที่ต้องการ (Dropdown) *</label>
+                                    <select class="w-full border border-gray-300 rounded-lg p-3 outline-none focus:border-primary bg-white" required>
+                                        <option value="">-- เลือกสายงานที่สนใจเป็นอันดับ 1 --</option>
+                                        ${jobOptions}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm mb-1 font-medium text-gray-700">ประสบการณ์ทำงาน (สรุปย่อ)</label>
+                                    <textarea class="w-full border border-gray-300 rounded-lg p-3 outline-none focus:border-primary bg-white" rows="3" placeholder="ระบุประสบการณ์ทำงานที่ผ่านมา (ถ้ามี)"></textarea>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                    <div class="border-2 border-dashed border-gray-300 p-6 rounded-xl text-center bg-white hover:bg-gray-50 transition cursor-pointer">
+                                        <i class="fas fa-image text-3xl text-gray-400 mb-2"></i>
+                                        <label class="block text-sm font-bold text-gray-700 cursor-pointer">รูปถ่ายผู้พิการ (Upload picture)</label>
+                                        <p class="text-xs text-gray-400 mt-1">ไฟล์ .jpg, .png ขนาดไม่เกิน 5MB</p>
+                                        <input type="file" accept="image/*" class="mt-3 w-full text-sm text-gray-500">
+                                    </div>
+                                    <div class="border-2 border-dashed border-gray-300 p-6 rounded-xl text-center bg-white hover:bg-gray-50 transition cursor-pointer">
+                                        <i class="fas fa-file-pdf text-3xl text-gray-400 mb-2"></i>
+                                        <label class="block text-sm font-bold text-gray-700 cursor-pointer">เอกสารแนบ (Resume / Portfolio)</label>
+                                        <p class="text-xs text-gray-400 mt-1">อัปโหลดไฟล์ .pdf หรือ .word</p>
+                                        <input type="file" accept=".pdf,.doc,.docx" class="mt-3 w-full text-sm text-gray-500">
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div class="flex flex-col-reverse sm:flex-row justify-between items-center pt-6 mt-8 border-t border-gray-200 gap-4">
+                            <button type="button" onclick="renderSelectRole()" class="w-full sm:w-auto text-gray-500 font-medium hover:text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-100 transition">ย้อนกลับ</button>
+                            <button type="submit" class="w-full sm:w-auto bg-primary text-white font-bold py-3 px-10 rounded-lg hover:bg-blue-700 shadow-md transition flex items-center justify-center gap-2">
+                                บันทึกข้อมูลและสร้างโปรไฟล์ <i class="fas fa-check-circle"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        function updateSidebarProfile() {
+            const avatar = document.getElementById('userAvatar');
+            const name = document.getElementById('userName');
+            const roleText = document.getElementById('userRoleText');
+
+            if (currentRole === 'employee') {
+                avatar.innerHTML = '<i class="fas fa-user"></i>';
+                avatar.className = "w-12 h-12 rounded-full bg-blue-100 text-primary flex items-center justify-center text-xl shadow-sm shrink-0";
+                name.innerText = MOCK_DATA.currentUser.name;
+                roleText.innerText = 'ผู้ใช้งาน (คนพิการ)';
+            } else if (currentRole === 'employer') {
+                avatar.innerHTML = '<i class="fas fa-building"></i>';
+                avatar.className = "w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl shadow-sm shrink-0";
+                name.innerText = MOCK_DATA.employerUser.name;
+                roleText.innerText = 'ผู้ประกอบการ';
+            } else {
+                avatar.innerHTML = '<i class="fas fa-shield-alt"></i>';
+                avatar.className = "w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xl shadow-sm shrink-0";
+                name.innerText = 'System Admin';
+                roleText.innerText = 'ผู้ดูแลระบบ';
+            }
+        }
+
+        function renderSidebarMenu() {
+            const nav = document.getElementById('navMenu');
+            nav.innerHTML = '';
+            
+            const menus = NAV_CONFIG[currentRole];
+            menus.forEach(item => {
+                const isActive = item.id === currentMenu;
+                const baseClass = "flex items-center gap-3 px-6 py-3.5 text-sm font-medium transition-colors cursor-pointer border-l-4";
+                const activeClass = isActive 
+                    ? "bg-blue-50 text-primary border-primary" 
+                    : "text-gray-600 border-transparent hover:bg-gray-50 hover:text-primary";
+                
+                nav.innerHTML += `
+                    <div onclick="setMenu('${item.id}')" class="${baseClass} ${activeClass}">
+                        <i class="fas ${item.icon} w-5 text-center text-lg"></i>
+                        <span>${item.label}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderContent() {
+            const content = document.getElementById('mainContent');
+            // Show loading state
+            content.innerHTML = `
+                <div class="flex flex-col justify-center items-center h-full text-gray-400">
+                    <i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-primary"></i>
+                    <p>กำลังโหลดข้อมูล...</p>
+                </div>`;
+            
+            // Simulate network delay
+            setTimeout(() => {
+                let html = '';
+                
+                // ==========================================
+                // EMPLOYEE VIEWS (Job Seeker)
+                // ==========================================
+                if (currentRole === 'employee') {
+                    if (currentMenu === 'home') {
+                         html = `
+                            <div class="fade-in max-w-5xl mx-auto pb-10">
+                                <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                                    <div>
+                                        <h1 class="text-3xl font-bold text-gray-800">สวัสดี ${MOCK_DATA.currentUser.name} 👋</h1>
+                                        <p class="text-gray-500 mt-1">ยินดีต้อนรับสู่พื้นที่ค้นหางานที่ออกแบบมาเพื่อคุณโดยเฉพาะ</p>
+                                    </div>
+                                    <div class="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100 flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-lg">${MOCK_DATA.currentUser.matchScore}%</div>
+                                        <div class="text-sm">
+                                            <p class="font-bold text-gray-700 leading-tight">ความพร้อมโปรไฟล์</p>
+                                            <p class="text-gray-500 text-xs">พร้อมสำหรับการจับคู่งาน</p>
+                                        </div>
+                                    </div>
+                                </header>
+                                
+                                <!-- Highlight Module -->
+                                <div class="bg-gradient-to-r from-blue-600 to-primary rounded-2xl p-6 text-white shadow-lg mb-8 relative overflow-hidden">
+                                    <div class="relative z-10 md:w-2/3">
+                                        <h2 class="text-2xl font-bold mb-2">โมดูล "ตำแหน่งงานที่เหมาะกับท่าน"</h2>
+                                        <p class="text-blue-100 mb-6 text-sm">(Extract data from employers) ระบบคำนวณจากทักษะและข้อจำกัดที่คุณระบุไว้ เพื่อค้นหาสภาพแวดล้อมที่เหมาะสมที่สุด</p>
+                                        <button onclick="setMenu('search_job')" class="bg-white text-primary font-bold px-6 py-2 rounded-lg shadow hover:bg-blue-50 transition">ดูงานทั้งหมดที่ตรงกับคุณ</button>
+                                    </div>
+                                    <i class="fas fa-bullseye absolute -bottom-10 -right-10 text-9xl text-white opacity-10"></i>
+                                </div>
+
+                                <div class="mb-8">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h3 class="text-lg font-bold text-gray-800 border-l-4 border-primary pl-3">งานแนะนำล่าสุด (Top Matches)</h3>
+                                    </div>
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        ${MOCK_DATA.jobs.filter(j => j.status === 'active').slice(0, 2).map(job => renderJobCard(job, true)).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (currentMenu === 'search_job') {
+                         html = `
+                            <div class="fade-in max-w-5xl mx-auto">
+                                <h1 class="text-2xl font-bold mb-4">ค้นหางาน</h1>
+                                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-3">
+                                    <div class="flex-1 relative">
+                                        <i class="fas fa-search absolute left-4 top-3 text-gray-400"></i>
+                                        <input type="text" placeholder="ค้นหาชื่อตำแหน่งงาน, บริษัท หรือทักษะ..." class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-12 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary">
+                                    </div>
+                                    <button class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition whitespace-nowrap"><i class="fas fa-filter mr-2"></i>ตัวกรอง</button>
+                                    <button class="bg-primary text-white px-8 py-2 rounded-lg hover:bg-blue-700 transition shadow-sm font-medium">ค้นหา</button>
+                                </div>
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                    ${MOCK_DATA.jobs.map(job => renderJobCard(job, true)).join('')}
+                                </div>
+                            </div>
+                        `;
+                    } else if (currentMenu === 'my_work') {
+                        html = `
+                            <div class="fade-in max-w-4xl mx-auto">
+                                <h1 class="text-2xl font-bold mb-6">งานที่สมัคร (My Work)</h1>
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden p-6">
+                                    <div class="space-y-4">
+                                        ${MOCK_DATA.applications.filter(a => a.applicantName === MOCK_DATA.currentUser.name).map(app => {
+                                            const job = MOCK_DATA.jobs.find(j => j.id === app.jobId);
+                                            const isInterview = app.status === 'interview';
+                                            return `
+                                            <div class="border border-gray-100 rounded-xl p-5 flex flex-col md:flex-row justify-between md:items-center gap-4 hover:shadow-md transition bg-gray-50">
+                                                <div class="flex gap-4">
+                                                    <div class="w-12 h-12 rounded-lg bg-white shadow-sm border border-gray-100 flex items-center justify-center text-primary text-xl shrink-0">
+                                                        <i class="fas fa-building"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h3 class="font-bold text-lg text-gray-800">${job.title}</h3>
+                                                        <p class="text-sm text-gray-500 mb-2">${job.company}</p>
+                                                        <span class="text-xs text-gray-500 bg-white px-2 py-1 rounded border">วันที่สมัคร: 12 ส.ค. 2026</span>
+                                                    </div>
+                                                </div>
+                                                <div class="flex flex-col items-start md:items-end gap-2">
+                                                    <span class="px-4 py-1.5 rounded-full text-sm font-bold shadow-sm ${isInterview ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-orange-100 text-orange-700 border border-orange-200'}">
+                                                        <i class="fas ${isInterview ? 'fa-check-circle' : 'fa-clock'} mr-1"></i> ${isInterview ? 'สถานะ: รอสัมภาษณ์' : 'สถานะ: รอพิจารณา'}
+                                                    </span>
+                                                    ${isInterview ? `<button class="text-sm text-primary hover:underline font-medium mt-1">ดูรายละเอียดนัดหมาย</button>` : ''}
+                                                </div>
+                                            </div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (currentMenu === 'assessment') {
+                        html = `
+                            <div class="fade-in max-w-5xl mx-auto">
+                                <h1 class="text-2xl font-bold mb-6">ศูนย์ประเมินความพร้อม (Assessment Center)</h1>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                    <!-- โมดูลแบบประเมินบุคลิกภาพ -->
+                                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-purple-500 relative overflow-hidden">
+                                        <div class="flex justify-between items-start mb-4 relative z-10">
+                                            <div>
+                                                <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded uppercase tracking-wide">Multiple Choices</span>
+                                                <h2 class="text-xl font-bold text-gray-800 mt-2">"แบบประเมินบุคลิกภาพ"</h2>
+                                            </div>
+                                            <div class="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center text-purple-500 text-xl"><i class="fas fa-brain"></i></div>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mb-6 relative z-10">ค้นหาจุดแข็ง ลักษณะนิสัย และสภาพแวดล้อมการทำงานที่เหมาะสมกับบุคลิกภาพของคุณ (ใช้เวลาประมาณ 10 นาที)</p>
+                                        <button onclick="showToast('ระบบกำลังเปิดแบบประเมินบุคลิกภาพ', 'info')" class="w-full bg-purple-600 text-white font-bold py-2.5 rounded-lg hover:bg-purple-700 transition shadow-sm relative z-10">เริ่มทำแบบประเมิน</button>
+                                        <i class="fas fa-puzzle-piece absolute -bottom-6 -right-6 text-8xl text-gray-50 opacity-50"></i>
+                                    </div>
+                                    
+                                    <!-- โมดูลแบบประเมินทักษะ -->
+                                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4 border-t-blue-500 relative overflow-hidden">
+                                        <div class="flex justify-between items-start mb-4 relative z-10">
+                                            <div>
+                                                <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded uppercase tracking-wide">Multiple Choices / Practical</span>
+                                                <h2 class="text-xl font-bold text-gray-800 mt-2">"แบบประเมินทักษะ"</h2>
+                                            </div>
+                                            <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 text-xl"><i class="fas fa-laptop-code"></i></div>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mb-6 relative z-10">ประเมินความสามารถทางวิชาชีพ ทักษะคอมพิวเตอร์ และทักษะพื้นฐานในการทำงาน (ใช้เวลาประมาณ 15 นาที)</p>
+                                        <button onclick="showToast('ระบบกำลังเปิดแบบประเมินทักษะ', 'info')" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition shadow-sm relative z-10">เริ่มทำแบบประเมิน</button>
+                                        <i class="fas fa-tools absolute -bottom-6 -right-6 text-8xl text-gray-50 opacity-50"></i>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                    <h3 class="text-lg font-bold mb-4 border-b pb-2"><i class="fas fa-history mr-2 text-gray-400"></i> ประวัติการประเมิน</h3>
+                                    <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
+                                        <div class="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl font-bold border-4 border-white shadow-sm">85%</div>
+                                        <div class="flex-1">
+                                            <p class="font-bold text-gray-800">ทักษะคอมพิวเตอร์พื้นฐาน (Basic IT Skills)</p>
+                                            <p class="text-sm text-gray-500">ประเมินเมื่อ: 10 ส.ค. 2026</p>
+                                        </div>
+                                        <button class="text-primary hover:underline text-sm font-medium">ดูรายงานฉบับเต็ม</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (currentMenu === 'learning') {
+                         html = `
+                            <div class="fade-in max-w-5xl mx-auto">
+                                <div class="mb-6">
+                                    <h1 class="text-2xl font-bold text-gray-800">โมดูล "ทักษะที่ต้องเพิ่มเติม" (Online Courses)</h1>
+                                    <p class="text-gray-500 mt-1">คลังสื่อการเรียนรู้ที่คัดสรรมาเพื่อเพิ่มโอกาสในการได้งานของคุณ</p>
+                                </div>
+                                
+                                <div class="flex gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar">
+                                    <button class="bg-dark text-white px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap">ทั้งหมด</button>
+                                    <button class="bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap">Hard Skills</button>
+                                    <button class="bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap">Soft Skills</button>
+                                    <button class="bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap">บทความ (Articles)</button>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    ${MOCK_DATA.learningMedia.map(media => `
+                                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow duration-300 group cursor-pointer flex flex-col">
+                                            <div class="bg-gray-200 h-40 relative flex items-center justify-center overflow-hidden">
+                                                <i class="${media.type === 'Video' ? 'fas fa-play text-4xl text-white opacity-80 group-hover:scale-125 transition-transform' : (media.type === 'Article' ? 'fas fa-newspaper text-4xl text-white opacity-80 group-hover:scale-110 transition-transform' : 'fas fa-laptop text-4xl text-white opacity-80 group-hover:scale-110 transition-transform')}"></i>
+                                                <div class="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-colors"></div>
+                                                <span class="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded font-medium">${media.length}</span>
+                                            </div>
+                                            <div class="p-5 flex-1 flex flex-col">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <span class="text-[10px] font-bold uppercase tracking-wider ${media.type === 'Video' ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50'} px-2 py-1 rounded">${media.type}</span>
+                                                    <span class="text-xs text-gray-400">${media.category}</span>
+                                                </div>
+                                                <h3 class="font-bold text-gray-800 leading-tight mb-3 line-clamp-2">${media.title}</h3>
+                                                <div class="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
+                                                    <button class="text-primary text-sm font-medium group-hover:underline">เข้าสู่บทเรียน <i class="fas fa-arrow-right text-xs ml-1"></i></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                         `;
+                    } else if (currentMenu === 'job_coaching') {
+                        html = `
+                            <div class="fade-in max-w-4xl mx-auto">
+                                <div class="mb-8">
+                                    <h1 class="text-3xl font-bold text-gray-800 mb-2">ผู้ฝึกสอนงาน (Job Coaching)</h1>
+                                    <p class="text-gray-500">ติดต่อผู้ฝึกสอนของเราเพื่อขอคำแนะนำและการสนับสนุนในการหางานและการเตรียมตัวสำหรับการสัมภาษณ์</p>
+                                </div>
+
+                                <!-- Coach Info Cards -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                    <!-- Coach Card 1 -->
+                                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
+                                        <div class="h-40 bg-gradient-to-br from-blue-400 to-blue-600 relative flex items-center justify-center">
+                                            <i class="fas fa-user-tie text-6xl text-blue-200 opacity-30"></i>
+                                        </div>
+                                        <div class="p-6">
+                                            <h3 class="text-xl font-bold text-gray-800 mb-1">คุณสมศรี รัตนมิน</h3>
+                                            <p class="text-sm text-primary font-medium mb-4"><i class="fas fa-briefcase mr-2"></i>Senior Job Coach</p>
+                                            <p class="text-sm text-gray-600 mb-4">ผู้เชี่ยวชาญด้านการเตรียมตัวสัมภาษณ์ และการพัฒนาทักษะการสื่อสาร มีประสบการณ์ 8 ปีในการช่วยเหลือผู้พิการ</p>
+                                            <div class="space-y-2 mb-4 text-sm">
+                                                <div class="flex items-center gap-2 text-gray-600">
+                                                    <i class="fas fa-phone text-primary w-5"></i>
+                                                    <span>086-XXX-XXXX</span>
+                                                </div>
+                                                <div class="flex items-center gap-2 text-gray-600">
+                                                    <i class="fas fa-envelope text-primary w-5"></i>
+                                                    <span>somjit@jobcoach.th</span>
+                                                </div>
+                                                <div class="flex items-center gap-2 text-gray-600">
+                                                    <i class="fas fa-clock text-primary w-5"></i>
+                                                    <span>จ.-ศ. 9:00-17:00 น.</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button onclick="document.querySelector('#coachForm').scrollIntoView({behavior: 'smooth'}); document.querySelector('input[name=selectedCoach]').value = 'coach1'; document.querySelector('#coachName').textContent = 'คุณสมศรี รัตนมิน';" class="flex-1 bg-primary text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm">ติดต่อคุณสมศรี</button>
+                                                <button class="flex-1 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition font-medium text-sm flex items-center justify-center gap-2">
+                                                    <i class="fab fa-line"></i> Line OA
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Coach Card 2 -->
+                                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
+                                        <div class="h-40 bg-gradient-to-br from-emerald-400 to-emerald-600 relative flex items-center justify-center">
+                                            <i class="fas fa-user-check text-6xl text-emerald-200 opacity-30"></i>
+                                        </div>
+                                        <div class="p-6">
+                                            <h3 class="text-xl font-bold text-gray-800 mb-1">คุณณัฐวัฒน์ ชุมภูมิ</h3>
+                                            <p class="text-sm text-secondary font-medium mb-4"><i class="fas fa-graduation-cap mr-2"></i>Job Coach Specialist</p>
+                                            <p class="text-sm text-gray-600 mb-4">เชี่ยวชาญด้านการประเมินทักษะและการพัฒนาแผนอาชีพ พร้อมช่วยเหลือในการแก้ไขประวัติการทำงาน</p>
+                                            <div class="space-y-2 mb-4 text-sm">
+                                                <div class="flex items-center gap-2 text-gray-600">
+                                                    <i class="fas fa-phone text-secondary w-5"></i>
+                                                    <span>089-XXX-XXXX</span>
+                                                </div>
+                                                <div class="flex items-center gap-2 text-gray-600">
+                                                    <i class="fas fa-envelope text-secondary w-5"></i>
+                                                    <span>natthawat@jobcoach.th</span>
+                                                </div>
+                                                <div class="flex items-center gap-2 text-gray-600">
+                                                    <i class="fas fa-clock text-secondary w-5"></i>
+                                                    <span>จ.-ศ. 8:30-16:30 น.</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button onclick="document.querySelector('#coachForm').scrollIntoView({behavior: 'smooth'}); document.querySelector('input[name=selectedCoach]').value = 'coach2'; document.querySelector('#coachName').textContent = 'คุณณัฐวัฒน์ ชุมภูมิ';" class="flex-1 bg-secondary text-white py-2 rounded-lg hover:bg-emerald-700 transition font-medium text-sm">ติดต่อคุณณัฐวัฒน์</button>
+                                                <button class="flex-1 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition font-medium text-sm flex items-center justify-center gap-2">
+                                                    <i class="fab fa-line"></i> Line OA
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Contact Form -->
+                                <div id="coachForm" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden p-8 scroll-mt-20">
+                                    <div class="mb-8 pb-6 border-b border-gray-100">
+                                        <h2 class="text-2xl font-bold text-gray-800 mb-2">แบบฟอร์มติดต่อผู้ฝึกสอน</h2>
+                                        <p class="text-gray-500 text-sm">กรุณากรอกข้อมูลด้านล่าง เราจะติดต่อกลับภายใน 24 ชั่วโมง</p>
+                                    </div>
+
+                                    <form onsubmit="event.preventDefault(); handleCoachFormSubmit();" class="space-y-6">
+                                        <!-- Coach Selection -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-3">เลือกผู้ฝึกสอน</label>
+                                            <input type="hidden" name="selectedCoach">
+                                            <div class="space-y-3">
+                                                <div class="relative">
+                                                    <input type="radio" id="coach1" name="coach" value="coach1" checked class="hidden peer" onchange="document.querySelector('#coachName').textContent = 'คุณสมศรี รัตนมิน (ค่าเริ่มต้น)'">
+                                                    <label for="coach1" class="block peer-checked:bg-blue-50 peer-checked:border-primary cursor-pointer p-4 border-2 border-gray-200 rounded-lg transition peer-checked:border-primary hover:border-gray-300">
+                                                        <div class="flex items-center gap-3">
+                                                            <div class="w-5 h-5 rounded-full border-2 border-gray-300 peer-checked:bg-primary peer-checked:border-primary flex items-center justify-center">
+                                                                <i class="fas fa-check text-white text-xs hidden peer-checked:block"></i>
+                                                            </div>
+                                                            <div>
+                                                                <p class="font-bold text-gray-800">คุณสมศรี รัตนมิน - Senior Job Coach</p>
+                                                                <p class="text-xs text-gray-500">เตรียมตัวสัมภาษณ์ & ทักษะการสื่อสาร</p>
+                                                            </div>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                                <div class="relative">
+                                                    <input type="radio" id="coach2" name="coach" value="coach2" class="hidden peer" onchange="document.querySelector('#coachName').textContent = 'คุณณัฐวัฒน์ ชุมภูมิ'">
+                                                    <label for="coach2" class="block peer-checked:bg-emerald-50 peer-checked:border-secondary cursor-pointer p-4 border-2 border-gray-200 rounded-lg transition peer-checked:border-secondary hover:border-gray-300">
+                                                        <div class="flex items-center gap-3">
+                                                            <div class="w-5 h-5 rounded-full border-2 border-gray-300 peer-checked:bg-secondary peer-checked:border-secondary flex items-center justify-center">
+                                                                <i class="fas fa-check text-white text-xs hidden peer-checked:block"></i>
+                                                            </div>
+                                                            <div>
+                                                                <p class="font-bold text-gray-800">คุณณัฐวัฒน์ ชุมภูมิ - Job Coach Specialist</p>
+                                                                <p class="text-xs text-gray-500">ประเมินทักษะ & พัฒนาแผนอาชีพ</p>
+                                                            </div>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Inquiry Topic -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-3">หัวข้อการสอบถาม</label>
+                                            <select class="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary transition" required>
+                                                <option value="">-- เลือกหัวข้อที่ต้องการปรึกษา --</option>
+                                                <option value="interview">เตรียมตัวสำหรับการสัมภาษณ์</option>
+                                                <option value="resume">ปรับปรุงประวัติการทำงาน (Resume)</option>
+                                                <option value="skills">พัฒนาทักษะการสื่อสาร</option>
+                                                <option value="career">วางแผนอาชีพและการศึกษาต่อ</option>
+                                                <option value="workplace">เรื่องสิ่งอำนวยความสะดวกในที่ทำงาน</option>
+                                                <option value="accommodation">การขออุปกรณ์ช่วยเหลือพิเศษ</option>
+                                                <option value="other">อื่นๆ (โปรดระบุ)</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Contact Method -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-3">วิธีการติดต่อที่ต้องการ</label>
+                                            <div class="space-y-2">
+                                                <div class="flex items-center">
+                                                    <input type="radio" id="method-phone" name="contactMethod" value="phone" checked class="w-4 h-4 text-primary rounded cursor-pointer">
+                                                    <label for="method-phone" class="ml-3 cursor-pointer text-gray-700 font-medium">โทรศัพท์</label>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <input type="radio" id="method-email" name="contactMethod" value="email" class="w-4 h-4 text-primary rounded cursor-pointer">
+                                                    <label for="method-email" class="ml-3 cursor-pointer text-gray-700 font-medium">อีเมล</label>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <input type="radio" id="method-line" name="contactMethod" value="line" class="w-4 h-4 text-primary rounded cursor-pointer">
+                                                    <label for="method-line" class="ml-3 cursor-pointer text-gray-700 font-medium">Line OA</label>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <input type="radio" id="method-visit" name="contactMethod" value="visit" class="w-4 h-4 text-primary rounded cursor-pointer">
+                                                    <label for="method-visit" class="ml-3 cursor-pointer text-gray-700 font-medium">เยี่ยมพบโดยตรง</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Available Time Slot -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-3">เวลาที่สะดวกในการติดต่อ</label>
+                                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                                <div class="flex items-center">
+                                                    <input type="radio" id="time-morning" name="timeSlot" value="morning" checked class="w-4 h-4 text-primary cursor-pointer">
+                                                    <label for="time-morning" class="ml-2 cursor-pointer text-sm text-gray-700">เช้า (8:00-12:00)</label>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <input type="radio" id="time-afternoon" name="timeSlot" value="afternoon" class="w-4 h-4 text-primary cursor-pointer">
+                                                    <label for="time-afternoon" class="ml-2 cursor-pointer text-sm text-gray-700">บ่าย (12:00-16:00)</label>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <input type="radio" id="time-evening" name="timeSlot" value="evening" class="w-4 h-4 text-primary cursor-pointer">
+                                                    <label for="time-evening" class="ml-2 cursor-pointer text-sm text-gray-700">เย็น (16:00-19:00)</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Message -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-2">รายละเอียดของคำถาม/ความต้องการ</label>
+                                            <textarea name="message" required placeholder="โปรดบรรยายรายละเอียดเกี่ยวกับสิ่งที่คุณต้องการปรึกษากับผู้ฝึกสอน..." class="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-primary transition resize-none" rows="5"></textarea>
+                                            <p class="text-xs text-gray-500 mt-1">คำแนะนำ: ยิ่งรายละเอียดมากเท่าไร ผู้ฝึกสอนก็จะสามารถช่วยเหลือได้มากขึ้นเท่านั้น</p>
+                                        </div>
+
+                                        <!-- Contact Information -->
+                                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                            <p class="text-sm font-bold text-gray-800 mb-3"><i class="fas fa-info-circle text-primary mr-2"></i>ข้อมูลติดต่อของคุณ</p>
+                                            <div class="space-y-3">
+                                                <div>
+                                                    <label class="block text-xs font-bold text-gray-700 mb-1">ชื่อ-นามสกุล</label>
+                                                    <input type="text" value="${MOCK_DATA.currentUser.name}" disabled class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-600 cursor-not-allowed">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-bold text-gray-700 mb-1">เบอร์โทรศัพท์</label>
+                                                    <input type="tel" placeholder="08X-XXX-XXXX" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-primary" required>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-bold text-gray-700 mb-1">อีเมล</label>
+                                                    <input type="email" placeholder="your.email@example.com" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-primary">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Checkbox for consent -->
+                                        <div class="flex items-start gap-3">
+                                            <input type="checkbox" id="consent" class="w-4 h-4 text-primary rounded cursor-pointer mt-1" required>
+                                            <label for="consent" class="text-sm text-gray-600 cursor-pointer">
+                                                ฉันยินยอมให้ผู้ฝึกสอนใช้ข้อมูลการติดต่อของฉันเพื่อติดต่อกลับเท่านั้น <span class="text-red-500">*</span>
+                                            </label>
+                                        </div>
+
+                                        <!-- Submit Button -->
+                                        <div class="pt-6 border-t flex gap-3">
+                                            <button type="submit" class="flex-1 bg-primary text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-md flex items-center justify-center gap-2">
+                                                <i class="fas fa-paper-plane"></i> ส่งแบบฟอร์ม
+                                            </button>
+                                            <button type="reset" class="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition">ล้างข้อมูล</button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- FAQ Section -->
+                                <div class="mt-12">
+                                    <h3 class="text-2xl font-bold text-gray-800 mb-6">คำถามที่พบบ่อย (FAQ)</h3>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                            <h4 class="font-bold text-gray-800 mb-2 flex items-start gap-2">
+                                                <i class="fas fa-question-circle text-primary mt-1 shrink-0"></i>
+                                                <span>ผู้ฝึกสอนจะตอบกลับในเวลาไหน?</span>
+                                            </h4>
+                                            <p class="text-sm text-gray-600">เราจะติดต่อกลับภายใน 24 ชั่วโมง ในวันธุรกิจปกติ (จันทร์-ศุกร์)</p>
+                                        </div>
+                                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                            <h4 class="font-bold text-gray-800 mb-2 flex items-start gap-2">
+                                                <i class="fas fa-question-circle text-primary mt-1 shrink-0"></i>
+                                                <span>บริการนี้เสียค่าใช้จ่ายหรือไม่?</span>
+                                            </h4>
+                                            <p class="text-sm text-gray-600">ไม่เสียค่าใช้จ่ายเลย บริการนี้เป็นส่วนหนึ่งของโครงการสนับสนุนผู้พิการในการหางาน</p>
+                                        </div>
+                                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                            <h4 class="font-bold text-gray-800 mb-2 flex items-start gap-2">
+                                                <i class="fas fa-question-circle text-primary mt-1 shrink-0"></i>
+                                                <span>ฉันสามารถขอการเยี่ยมพบโดยตรงได้หรือไม่?</span>
+                                            </h4>
+                                            <p class="text-sm text-gray-600">ได้ โปรดระบุความต้องการในแบบฟอร์มและผู้ฝึกสอนจะจัดเวลาให้กับคุณ</p>
+                                        </div>
+                                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                            <h4 class="font-bold text-gray-800 mb-2 flex items-start gap-2">
+                                                <i class="fas fa-question-circle text-primary mt-1 shrink-0"></i>
+                                                <span>ข้อมูลของฉันจะเป็นความลับหรือไม่?</span>
+                                            </h4>
+                                            <p class="text-sm text-gray-600">ใช่ ข้อมูลของคุณจะถูกเก็บเป็นความลับอย่างเข้มงวดตามกฎหมายคุ้มครองข้อมูล</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (currentMenu === 'setting') {
+                        html = `
+                            <div class="fade-in max-w-3xl mx-auto">
+                                <h1 class="text-2xl font-bold mb-6">ตั้งค่าข้อมูลส่วนตัว (Profile Settings)</h1>
+                                <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+                                    <div class="flex items-center gap-6 mb-8 border-b pb-6">
+                                        <div class="relative">
+                                            <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center text-4xl text-gray-400 border-4 border-white shadow-md"><i class="fas fa-user"></i></div>
+                                            <button class="absolute bottom-0 right-0 bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white hover:bg-blue-700 shadow-sm"><i class="fas fa-camera text-xs"></i></button>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-xl font-bold text-gray-800">${MOCK_DATA.currentUser.name}</h2>
+                                            <p class="text-gray-500 text-sm mb-2">อัปเดตล่าสุด: วันนี้</p>
+                                            <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded border border-green-200">โปรไฟล์สมบูรณ์ 95%</span>
+                                        </div>
+                                    </div>
+
+                                    <form onsubmit="event.preventDefault(); showToast('อัปเดตข้อมูลสำเร็จ', 'success');" class="space-y-5">
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-1">ประเภทความพิการที่บันทึกไว้</label>
+                                            <input type="text" value="${MOCK_DATA.currentUser.disability}" disabled class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-gray-600 cursor-not-allowed">
+                                            <p class="text-xs text-red-500 mt-1">* หากต้องการแก้ไขประเภทความพิการ กรุณาติดต่อ Admin พร้อมแนบเอกสารรับรอง</p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-1">ทักษะความสามารถ (Skills)</label>
+                                            <input type="text" value="${MOCK_DATA.currentUser.skills.join(', ')}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 outline-none focus:border-primary">
+                                            <p class="text-xs text-gray-500 mt-1">คั่นด้วยเครื่องหมายจุลภาค (,)</p>
+                                        </div>
+                                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mt-4">
+                                            <label class="block text-sm font-bold text-primary mb-2"><i class="fas fa-wheelchair mr-2"></i>สิ่งอำนวยความสะดวกที่ต้องการ (Required Accommodations)</label>
+                                            <p class="text-xs text-gray-600 mb-2">ข้อมูลนี้ช่วยให้ระบบจับคู่งานที่มีสภาพแวดล้อมเหมาะสมกับคุณมากที่สุด</p>
+                                            <textarea class="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-primary bg-white" rows="3">ล่ามภาษามือเมื่อประชุม, เครื่องแปลงเสียงเป็นข้อความ, อ่านริมฝีปาก</textarea>
+                                        </div>
+                                        <div class="pt-6 mt-6 border-t flex justify-end">
+                                            <button type="submit" class="px-8 py-2.5 bg-primary text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition">บันทึกการเปลี่ยนแปลง</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                // ==========================================
+                // EMPLOYER VIEWS
+                // ==========================================
+                else if (currentRole === 'employer') {
+                    if (currentMenu === 'home') {
+                        html = `
+                            <div class="fade-in max-w-6xl mx-auto">
+                                <h1 class="text-2xl font-bold mb-6">Dashboard ผู้ประกอบการ</h1>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-500 mb-1">ประกาศงานที่เปิดรับ</p>
+                                            <p class="text-3xl font-bold text-gray-800">2</p>
+                                        </div>
+                                        <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 text-xl"><i class="fas fa-briefcase"></i></div>
+                                    </div>
+                                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-500 mb-1">ผู้สมัครรอการพิจารณา</p>
+                                            <p class="text-3xl font-bold text-gray-800">8</p>
+                                        </div>
+                                        <div class="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center text-orange-500 text-xl"><i class="fas fa-users"></i></div>
+                                    </div>
+                                    <div class="bg-gradient-to-br from-emerald-500 to-secondary p-6 rounded-xl shadow-sm text-white flex items-center justify-between relative overflow-hidden">
+                                        <div class="relative z-10">
+                                            <p class="text-sm font-medium text-emerald-100 mb-1">สัดส่วนการจ้างงานตาม กม.</p>
+                                            <p class="text-2xl font-bold mt-1 flex items-center gap-2">ครบตามสัดส่วน <i class="fas fa-check-circle text-emerald-200"></i></p>
+                                            <p class="text-xs text-emerald-100 mt-1">อ้างอิง ม.33 (อัตราส่วน 100:1)</p>
+                                        </div>
+                                        <i class="fas fa-balance-scale absolute -right-4 -bottom-4 text-7xl text-white opacity-20"></i>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+                                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                                        <h2 class="text-lg font-bold text-gray-800">ประกาศงานที่ดำเนินการอยู่</h2>
+                                        <button onclick="setMenu('create_job')" class="text-sm bg-white border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 font-medium transition">สร้างประกาศงานใหม่</button>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left border-collapse min-w-max">
+                                            <thead>
+                                                <tr class="bg-white text-gray-500 text-xs uppercase tracking-wider border-b">
+                                                    <th class="p-4 font-bold">ตำแหน่งงาน</th>
+                                                    <th class="p-4 font-bold">รองรับความพิการ</th>
+                                                    <th class="p-4 font-bold text-center">ผู้สมัคร</th>
+                                                    <th class="p-4 font-bold">สถานะ</th>
+                                                    <th class="p-4 font-bold text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-sm">
+                                                ${MOCK_DATA.jobs.map(job => `
+                                                    <tr class="border-b border-gray-50 hover:bg-gray-50 transition">
+                                                        <td class="p-4 font-bold text-gray-800">${job.title}</td>
+                                                        <td class="p-4 text-gray-600">
+                                                            <div class="flex flex-wrap gap-1">
+                                                                ${job.reqDisability.map(d => `<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px]">${d}</span>`).join('')}
+                                                            </div>
+                                                        </td>
+                                                        <td class="p-4 text-center">
+                                                            ${job.applicants > 0 ? `<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold cursor-pointer hover:bg-blue-200" onclick="setMenu('applicant_list')">${job.applicants} คน</span>` : '<span class="text-gray-400 text-xs">-</span>'}
+                                                        </td>
+                                                        <td class="p-4">
+                                                            ${job.status === 'active' 
+                                                                ? '<span class="text-green-600 font-medium flex items-center gap-1"><i class="fas fa-circle text-[8px]"></i> เปิดรับ</span>' 
+                                                                : '<span class="text-orange-500 font-medium flex items-center gap-1"><i class="fas fa-clock text-[8px]"></i> รออนุมัติ</span>'}
+                                                        </td>
+                                                        <td class="p-4 text-right">
+                                                            <button class="text-gray-400 hover:text-primary transition p-1"><i class="fas fa-ellipsis-v"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (currentMenu === 'create_job') {
+                         // Similar to previous implementation, keeping concise for limits
+                         html = renderPlaceholder(NAV_CONFIG.employer.find(m => m.id === currentMenu).label + " (มีฟอร์มเหมือนด้านบน)");
+                    } else {
+                        html = renderPlaceholder(NAV_CONFIG.employer.find(m => m.id === currentMenu).label);
+                    }
+                }
+                
+                // ==========================================
+                // ADMIN VIEWS
+                // ==========================================
+                else if (currentRole === 'admin') {
+                     if (currentMenu === 'dashboard') {
+                         // Similar to previous implementation
+                         html = renderPlaceholder(NAV_CONFIG.admin.find(m => m.id === currentMenu).label + " (แดชบอร์ดสถิติรวม)");
+                    } else {
+                        html = renderPlaceholder(NAV_CONFIG.admin.find(m => m.id === currentMenu).label);
+                    }
+                }
+
+                content.innerHTML = html;
+            }, 400); // Simulate network loading
+        }
+
+        function renderJobCard(job, showApply = false) {
+            return `
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md transition-shadow group relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">NEW</div>
+                    <div>
+                        <div class="flex items-start justify-between mb-2">
+                            <h3 class="font-bold text-lg text-gray-800 leading-tight group-hover:text-primary transition-colors">${job.title}</h3>
+                        </div>
+                        <p class="text-sm font-medium text-gray-600 mb-4 flex items-center gap-2"><i class="fas fa-building text-gray-400"></i> ${job.company}</p>
+                        
+                        <div class="grid grid-cols-2 gap-2 text-xs text-gray-500 mb-4">
+                            <div class="flex items-center gap-1.5"><i class="fas fa-map-marker-alt w-3 text-center"></i> ${job.location}</div>
+                            <div class="flex items-center gap-1.5"><i class="fas fa-clock w-3 text-center"></i> ${job.type}</div>
+                            <div class="flex items-center gap-1.5 col-span-2"><i class="fas fa-coins w-3 text-center text-orange-400"></i> ฿${job.salary}</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <p class="text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wide">ประเภทความพิการที่รับ:</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${job.reqDisability.map(d => `<span class="border border-gray-200 text-gray-600 text-[10px] px-2 py-0.5 rounded bg-gray-50">${d}</span>`).join('')}
+                            </div>
+                        </div>
+
+                        <div class="mb-6 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                            <p class="text-[11px] font-bold text-primary mb-1.5"><i class="fas fa-wheelchair mr-1"></i> สิ่งอำนวยความสะดวกในที่ทำงาน:</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${job.accommodations.map(acc => `<span class="bg-white border border-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded shadow-sm">${acc}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${showApply ? `<button onclick="showToast('ส่งใบสมัครงานเรียบร้อยแล้ว!', 'success')" class="w-full bg-white border-2 border-primary text-primary py-2.5 rounded-lg font-bold hover:bg-primary hover:text-white transition-colors flex items-center justify-center gap-2 group-hover:shadow-md">สมัครงานนี้ <i class="fas fa-paper-plane text-sm"></i></button>` : ''}
+                </div>
+            `;
+        }
+
+        function renderPlaceholder(title) {
+            return `
+                <div class="fade-in flex flex-col items-center justify-center h-full text-gray-400 py-20">
+                    <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center text-4xl mb-4 text-gray-300">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-600 mb-2">${title}</h2>
+                    <p class="text-sm">โมดูลนี้อยู่ระหว่างการพัฒนาโครงสร้างหน้าจอ</p>
+                </div>`;
+        }
+
+        function handleCoachFormSubmit() {
+            // Get form data
+            const formData = new FormData(document.querySelector('form[onsubmit*="handleCoachFormSubmit"]'));
+            const coach = document.querySelector('input[name="coach"]:checked').value;
+            const topic = document.querySelector('select').value;
+            const contactMethod = document.querySelector('input[name="contactMethod"]:checked').value;
+            const timeSlot = document.querySelector('input[name="timeSlot"]:checked').value;
+            const message = document.querySelector('textarea[name="message"]').value;
+            const phone = document.querySelector('input[placeholder="08X-XXX-XXXX"]').value;
+            const email = document.querySelector('input[placeholder="your.email@example.com"]').value;
+
+            // Validate required fields
+            if (!topic || !message || !phone) {
+                showToast('โปรดกรอกข้อมูลที่จำเป็นให้ครบถ้วน', 'error');
+                return;
+            }
+
+            // Validate phone format
+            if (!/^\d{10}$/.test(phone.replace(/-/g, ''))) {
+                showToast('โปรดกรอกเบอร์โทรศัพท์ที่ถูกต้อง', 'error');
+                return;
+            }
+
+            // Simulate form submission
+            const submitBtn = document.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>กำลังส่ง...';
+
+            // Simulate network delay
+            setTimeout(() => {
+                // Reset button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+
+                // Show success message
+                showToast('ส่งแบบฟอร์มเรียบร้อย ผู้ฝึกสอนจะติดต่อกลับภายใน 24 ชั่วโมง', 'success');
+
+                // Reset form
+                document.querySelector('form[onsubmit*="handleCoachFormSubmit"]').reset();
+
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // Log submission details (for debugging)
+                console.log('Coach Contact Form Submitted:', {
+                    coach: coach,
+                    topic: topic,
+                    method: contactMethod,
+                    timeSlot: timeSlot,
+                    message: message,
+                    phone: phone,
+                    email: email,
+                    timestamp: new Date().toLocaleString('th-TH')
+                });
+            }, 1500);
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let config = { icon: 'fa-info-circle', bg: 'bg-gray-800' };
+            if (type === 'success') config = { icon: 'fa-check-circle', bg: 'bg-emerald-600' };
+            if (type === 'error') config = { icon: 'fa-exclamation-triangle', bg: 'bg-red-600' };
+            
+            toast.className = `${config.bg} text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 fade-in font-medium transform transition-all duration-300 translate-y-10 opacity-0 pointer-events-auto border border-white border-opacity-20`;
+            toast.innerHTML = `<i class="fas ${config.icon} text-lg"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+            
+            // Animate out and remove
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Initialize application on load
+        window.onload = () => { 
+            initApp(); 
+        };
+    </script>
+</body>
+</html>
