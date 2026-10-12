@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบประเมินความสนใจและความสามารถ</title>
+<style>
+:root{font-family:Arial,"Noto Sans Thai",sans-serif;color:#202124;background:#fff}
+*{box-sizing:border-box}body{margin:0;padding:16px;background:#fff}
+h1{font-size:1.35rem;margin:0 0 16px}
+.layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.module{border:1px solid #dadce0;border-radius:12px;padding:14px;min-width:0}
+.module h2{font-size:1.1rem;margin:0 0 12px}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th,td{padding:9px 4px;border-bottom:1px solid #eee;vertical-align:middle}
+th{font-size:.8rem;background:#f1f3f4;text-align:center}
+th:first-child{text-align:left;border-radius:6px 0 0 6px}
+th:nth-child(1){width:auto}th:nth-child(2){width:52px}th:nth-child(3){width:62px}
+td:first-child{font-size:.9rem;overflow-wrap:anywhere}
+td:nth-child(2),td:nth-child(3){text-align:center}
+input[type=checkbox]{width:19px;height:19px;accent-color:#1967d2;cursor:pointer}
+.total{display:flex;justify-content:space-between;align-items:center;padding-top:12px;font-weight:600}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+button{border:0;border-radius:8px;padding:12px 16px;font-size:1rem;cursor:pointer;background:#1967d2;color:#fff}
+button.secondary{background:#f1f3f4;color:#202124}
+.results{border:1px solid #dadce0;border-radius:12px;padding:18px;margin-top:18px}
+.results h2{margin-top:0}.rank{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee}
+.error{text-align:center;padding:20px}.error h2{color:#b3261e}
+.small{font-size:.9rem;color:#5f6368}
+@media(max-width:650px){body{padding:10px}.layout{grid-template-columns:1fr}.module{padding:12px}}
+</style>
+</head>
+<body>
+<h1>แบบประเมินความสนใจและความสามารถ</h1>
+<h3>อ่านกิจกรรมแต่ละข้อต่อไปนี้  แล้วเลือกในช่องที่ตรงกับตนเอง (สามารถเลือก 1 ช่อง 2 ช่อง หรือไม่เลือกเลยได้):</h3> 
+<h4>ช่อง "ชอบ/อยากลอง" (ตรงกับช่อง สนใจ)</h4> 
+<h4>ช่อง "ทำได้/ทำเป็น" (ตรงกับช่อง สามารถ)</h4> 
+
+<div id="form" class="layout"></div>
+<div class="actions">
+<button id="process">ประมวลผลคะแนน</button>
+<button id="clear" class="secondary">ล้างคำตอบทั้งหมด</button>
+</div>
+<div id="results" hidden></div>
+<script>
+const modules=[
+{name:"Realistic: R เป็นคนที่ชอบลงมือทำจริง อยู่กับอุปกรณ์ เครื่องมือ และกิจกรรมกลางแจ้ง",items:["งานฝีมือหรือกิจกรรมที่ได้ลงมือทำ","งานที่มีอุปกรณ์หรือเครื่องมือ","ใช้เทคโนโลยี เครื่องมือต่าง ๆ","ลงมือประดิษฐ์สิ่งของต่าง ๆ","ซ่อมเครื่องใช้ต่าง ๆ เอง","ทำงานข้างนอกมากกว่าอยู่ในห้องทำงาน"]},
+{name:"Social: S เป็นคนที่ชอบคุยกับผู้คน ทำความเข้าใจผู้อื่น ชอบแบ่งปันและทำงานเป็นทีม",items:["สร้างความสัมพันธ์ และสนิทกับคนอื่นได้ง่าย","ให้กำลังใจและเข้าใจผู้อื่น","ช่วยเหลือ แนะนำ ให้ความรู้แก่คนอื่น","ให้คำปรึกษา รับฟังปัญหาชีวิต","ทำงานเป็นทีม","ช่วยเหลือสังคม"]},
+{name:"Investigative: I เป็นคนที่ชอบคิดวิเคราะห์ อยากรู้อยากเห็น ค้นหาคำตอบ และแก้โจทย์ท้าทาย",items:["งานวิเคราะห์ สำรวจ และใช้ความคิด","งานเกี่ยวกับวิทยาศาสตร์","งานค้นคว้า สำรวจ","หาวิธีการแก้ปัญหา","ใช้การคำนวณทางคณิตศาสตร์","งานที่ซับซ้อน ท้าทาย"]},
+{name:"Enterprising: E เป็นคนที่กล้าพูด กล้าตัดสินใจ ชอบวางแผน และชอบการแข่งขัน",items:["ติดต่อพบปะผู้คน ชอบเข้าสังคม","เป็นผู้นำ สนใจเกี่ยวกับการบริหารจัดการ","การแข่งขัน โน้มน้าวผู้คน","งานขาย","กล้าเสี่ยง กล้าเผชิญความท้าทาย","วางเป้าหมาย เพื่อกำหนดทิศทาง"]},
+{name:"Artistic: A เป็นคนที่ชอบความเป็นอิสระ จินตนาการสูง ชอบถ่ายทอดความคิดผ่านศิลปะและการสื่อสาร",items:["สร้างสรรค์กล้าแสดงออก","งานทางศิลปะ","การใช้จินตนาการ","การวาดภาพ ใช้ภาษาและการเขียน","คิดอิสระนอกกรอบ","ทำสิ่งใหม่ ๆ"]},
+{name:"Conventional: C เป็นคนที่ละเอียดรอบคอบ ชอบความเป็นระเบียบ และการจัดการข้อมูลที่เป็นระบบ",items:["ทำงานตามระบบ","ไม่ชอบการเปลี่ยนแปลง","ทำงานกับข้อมูล","ทำงานตามคำสั่ง","ทำเรื่องซ้ำ ๆ เดิม ๆ","มีระเบียบ มีความอดทน"]}
+];
+const answers=modules.map(m=>m.items.map(()=>[false,false]));
+const form=document.getElementById('form'),results=document.getElementById('results');
+function render(){
+ form.innerHTML='';
+ modules.forEach((mod,mi)=>{
+  const card=document.createElement('section');card.className='module';
+  const title=document.createElement('h2');title.textContent=mod.name;card.appendChild(title);
+  const table=document.createElement('table');
+  table.innerHTML='<thead><tr><th>ข้อ</th><th>สนใจ</th><th>สามารถ</th></tr></thead>';
+  const tbody=document.createElement('tbody');
+  mod.items.forEach((item,ii)=>{
+   const tr=document.createElement('tr');
+   const label=document.createElement('td');label.textContent=(ii+1)+'. '+item;tr.appendChild(label);
+   for(let col=0;col<2;col++){
+    const td=document.createElement('td'),cb=document.createElement('input');
+    cb.type='checkbox';cb.setAttribute('aria-label',mod.name+' ข้อ '+(ii+1)+' '+(col===0?'สนใจ':'สามารถ'));
+    cb.checked=answers[mi][ii][col];
+    cb.addEventListener('change',()=>{answers[mi][ii][col]=cb.checked;updateTotal(mi);results.hidden=true;});
+    td.appendChild(cb);tr.appendChild(td);
+   }
+   tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);card.appendChild(table);
+//   const total=document.createElement('div');total.className='total';total.innerHTML='<span>คะแนนรวม</span><span id="total-'+mi+'">0/12</span>';card.appendChild(total);
+  form.appendChild(card);
+ });
+ modules.forEach((_,i)=>updateTotal(i));
+}
+function getScores(){return modules.map((m,i)=>({name:m.name,score:answers[i].reduce((s,r)=>s+Number(r[0])+Number(r[1]),0)}));}
+function updateTotal(i){const el=document.getElementById('total-'+i);if(el)el.textContent=getScores()[i].score+'/12';}
+document.getElementById('process').addEventListener('click',()=>{
+ const scores=getScores(),ranked=[...scores].sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
+ const maxTie=Math.max(...scores.map(s=>scores.filter(t=>t.score===s.score).length));
+ results.hidden=false;results.innerHTML='';results.className='results';
+ if(maxTie>=4){
+//   results.innerHTML='<div class="error"><h2>ไม่สามารถประมวลผลได้</h2><p>โปรดติดต่อผ่าน LineOA</p><p class="small">มีตั้งแต่ 4 Modules ขึ้นไปที่มีคะแนนรวมเท่ากัน จึงไม่สามารถจัดอันดับได้</p></div>';
+  results.innerHTML='<div class="error"><h2>ไม่สามารถประมวลผลได้</h2><p>โปรดติดต่อผ่าน LineOA</p></div>';
+  return;
+ }
+ const heading=document.createElement('h2');heading.textContent='ผลการประเมิน';results.appendChild(heading);
+ const note=document.createElement('p');note.className='small';note.textContent='ตัวอักษรที่จะช่วยบอกจุดเด่น สไตล์การทำงาน และทิศทางสายการเรียน/อาชีพในอนาคตได้คือ........';results.appendChild(note);
+ ranked.slice(0,3).forEach((r,i)=>{const row=document.createElement('div');row.className='rank';const name=document.createElement('span');name.textContent=(i+1)+'. '+r.name;const score=document.createElement('strong');score.textContent=r.score+'/12';row.append(name,score);results.appendChild(row);});
+ const copy=document.createElement('button');copy.textContent='คัดลอกผลการประเมิน';copy.addEventListener('click',async()=>{const text='ผลการประเมิน 3 อันดับแรก\\n'+ranked.slice(0,3).map((r,i)=>(i+1)+'. '+r.name+': '+r.score+'/12 คะแนน').join('\\n');try{await navigator.clipboard.writeText(text);copy.textContent='คัดลอกแล้ว';}catch(e){window.prompt('คัดลอกข้อความนี้',text);}});results.appendChild(copy);
+});
+document.getElementById('clear').addEventListener('click',()=>{modules.forEach((m,mi)=>m.items.forEach((_,ii)=>answers[mi][ii]=[false,false]));results.hidden=true;render();});
+render();
+</script>
+</body>
+</html>
