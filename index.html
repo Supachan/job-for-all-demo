@@ -139,15 +139,23 @@
                 { id: 'A03', jobId: 'J01', applicantName: 'คุณวิชัย แสงทอง', matchScore: 78, status: 'pending' }
             ],
             learningMedia: [
-                { id: 'L01', title: 'เทคนิคการสัมภาษณ์งานออนไลน์อย่างมั่นใจ', type: 'Video', length: '15 mins', category: 'Soft Skills' },
+                { id: 'L01', title: 'ทฤษฎี Holland', type: 'PDF', length: '5 mins read', category: 'Knowledge', url: './pdf/KnowledgeHub-HollandTheory.pdf'},
                 { id: 'L02', title: 'การใช้งานโปรแกรมตารางคำนวณเบื้องต้น (Excel)', type: 'Course', length: '2 hrs', category: 'Hard Skills' },
-                { id: 'L03', title: 'สิทธิประโยชน์คนพิการในสถานที่ทำงาน', type: 'Article', length: '5 mins read', category: 'Knowledge' }
+                { id: 'L03', title: 'สิทธิประโยชน์คนพิการในสถานที่ทำงาน', type: 'Article', length: '5 mins read', category: 'Knowledge' },
+                { id: 'L04', title: 'เทคนิคการสัมภาษณ์งานออนไลน์อย่างมั่นใจ', type: 'Video', length: '15 mins', category: 'Soft Skills' },
             ]
         };
 
         let currentRole = 'employee';
         let currentMenu = 'home';
         let isSidebarOpen = false;
+
+        function openPersonalityAssessment() {
+            const panel = document.getElementById('personalityAssessmentPanel');
+            const frame = document.getElementById('personalityAssessmentFrame');
+            panel.hidden = false;
+            frame.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
         // Navigation Configuration based on Role
         const NAV_CONFIG = {
@@ -708,7 +716,7 @@
                                             <div class="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center text-purple-500 text-xl"><i class="fas fa-brain"></i></div>
                                         </div>
                                         <p class="text-sm text-gray-500 mb-6 relative z-10">ค้นหาจุดแข็ง ลักษณะนิสัย และสภาพแวดล้อมการทำงานที่เหมาะสมกับบุคลิกภาพของคุณ (ใช้เวลาประมาณ 10 นาที)</p>
-                                        <button onclick="showToast('ระบบกำลังเปิดแบบประเมินบุคลิกภาพ', 'info')" class="w-full bg-purple-600 text-white font-bold py-2.5 rounded-lg hover:bg-purple-700 transition shadow-sm relative z-10">เริ่มทำแบบประเมิน</button>
+                                        <button type="button" onclick="openPersonalityAssessment()" class="block w-full box-border text-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition shadow-sm relative z-10"><i class="fas fa-laptop-code mr-2"></i>เริ่มทำแบบประเมิน</button>
                                         <i class="fas fa-puzzle-piece absolute -bottom-6 -right-6 text-8xl text-gray-50 opacity-50"></i>
                                     </div>
                                     
@@ -722,9 +730,14 @@
                                             <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 text-xl"><i class="fas fa-laptop-code"></i></div>
                                         </div>
                                         <p class="text-sm text-gray-500 mb-6 relative z-10">ประเมินความสามารถทางวิชาชีพ ทักษะคอมพิวเตอร์ และทักษะพื้นฐานในการทำงาน (ใช้เวลาประมาณ 15 นาที)</p>
-                                        <a href="./skill_assessment_top3.html" class="block w-full box-border text-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition shadow-sm relative z-10"><i class="fas fa-laptop-code mr-2"></i>เริ่มทำแบบประเมิน</a>
+                                        <button onclick="showToast('ระบบกำลังเปิดแบบประเมินทักษะ', 'info')" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition shadow-sm relative z-10">เริ่มทำแบบประเมิน</button>
                                         <i class="fas fa-tools absolute -bottom-6 -right-6 text-8xl text-gray-50 opacity-50"></i>
                                     </div>
+                                </div>
+
+                                <div id="personalityAssessmentPanel" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-8" hidden>
+                                    <h2 class="text-lg font-bold text-gray-800 mb-3">แบบประเมินความสนใจและความสามารถ</h2>
+                                    <iframe id="personalityAssessmentFrame" src="./skill_assessment_top3.html" title="แบบประเมินบุคลิกภาพ" class="w-full border-0 rounded-lg" style="min-height: 600px;"></iframe>
                                 </div>
                                 
                                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -770,7 +783,8 @@
                                                 </div>
                                                 <h3 class="font-bold text-gray-800 leading-tight mb-3 line-clamp-2">${media.title}</h3>
                                                 <div class="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
-                                                    <button class="text-primary text-sm font-medium group-hover:underline">เข้าสู่บทเรียน <i class="fas fa-arrow-right text-xs ml-1"></i></button>
+                                                    <!-- <button class="text-primary text-sm font-medium group-hover:underline">เข้าสู่บทเรียน <i class="fas fa-arrow-right text-xs ml-1"></i></button> -->
+                                                    <a href="${media.url}" target="_blank" rel="noopener" class="text-primary text-sm font-medium group-hover:underline">  เข้าสู่บทเรียน <i class="fas fa-arrow-right text-xs ml-1"></i></a>
                                                 </div>
                                             </div>
                                         </div>
