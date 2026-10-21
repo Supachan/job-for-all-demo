@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>แบบประเมินความสนใจและความสามารถ</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{font-family:Arial,"Noto Sans Thai",sans-serif;color:#202124;background:#fff}
+:root{font-family:"Sarabun","Inter",sans-serif;color:#202124;background:#fff}
 *{box-sizing:border-box}body{margin:0;padding:16px;background:#fff}
 h1{font-size:1.35rem;margin:0 0 16px}
 .layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -21,7 +22,7 @@ td:nth-child(2),td:nth-child(3){text-align:center}
 input[type=checkbox]{width:19px;height:19px;accent-color:#1967d2;cursor:pointer}
 .total{display:flex;justify-content:space-between;align-items:center;padding-top:12px;font-weight:600}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
-button{border:0;border-radius:8px;padding:12px 16px;font-size:1rem;cursor:pointer;background:#1967d2;color:#fff}
+button{font-family:inherit;border:0;border-radius:8px;padding:12px 16px;font-size:1rem;cursor:pointer;background:#1967d2;color:#fff}
 button.secondary{background:#f1f3f4;color:#202124}
 .results{border:1px solid #dadce0;border-radius:12px;padding:18px;margin-top:18px}
 .results h2{margin-top:0}.rank{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee}
@@ -31,7 +32,7 @@ button.secondary{background:#f1f3f4;color:#202124}
 </style>
 </head>
 <body>
-<h1>แบบประเมินความสนใจและความสามารถ</h1>
+<!-- <h1>แบบประเมินความสนใจและความสามารถ</h1> -->
 <h3>อ่านกิจกรรมแต่ละข้อต่อไปนี้  แล้วเลือกในช่องที่ตรงกับตนเอง (สามารถเลือก 1 ช่อง 2 ช่อง หรือไม่เลือกเลยได้):</h3> 
 <h4> "ชอบ/อยากลอง" (ตรงกับช่อง สนใจ)</h4> 
 <h4> "ทำได้/ทำเป็น" (ตรงกับช่อง สามารถ)</h4> 
@@ -97,7 +98,7 @@ document.getElementById('process').addEventListener('click',()=>{
  const heading=document.createElement('h2');heading.textContent='ผลการประเมิน';results.appendChild(heading);
  const note=document.createElement('p');note.className='small';note.textContent='ตัวอักษรที่จะช่วยบอกจุดเด่น สไตล์การทำงาน และทิศทางสายการเรียน/อาชีพในอนาคตได้คือ........';results.appendChild(note);
  ranked.slice(0,3).forEach((r,i)=>{const row=document.createElement('div');row.className='rank';const name=document.createElement('span');name.textContent=(i+1)+'. '+r.name;const score=document.createElement('strong');score.textContent=r.score+'/12';row.append(name,score);results.appendChild(row);});
- const copy=document.createElement('button');copy.textContent='คัดลอกผลการประเมิน';copy.addEventListener('click',async()=>{const text='ผลการประเมิน 3 อันดับแรก\\n'+ranked.slice(0,3).map((r,i)=>(i+1)+'. '+r.name+': '+r.score+'/12 คะแนน').join('\\n');try{await navigator.clipboard.writeText(text);copy.textContent='คัดลอกแล้ว';}catch(e){window.prompt('คัดลอกข้อความนี้',text);}});results.appendChild(copy);
+ const copy=document.createElement('button');copy.textContent='คัดลอกผลการประเมิน';copy.addEventListener('click',async()=>{const text='ผลการประเมิน 3 อันดับแรก\n'+ranked.slice(0,3).map((r,i)=>(i+1)+'. '+r.name+': '+r.score+'/12 คะแนน').join('\n');try{await navigator.clipboard.writeText(text);copy.textContent='คัดลอกแล้ว';}catch(e){window.prompt('คัดลอกข้อความนี้',text);}});results.appendChild(copy);
 });
 document.getElementById('clear').addEventListener('click',()=>{modules.forEach((m,mi)=>m.items.forEach((_,ii)=>answers[mi][ii]=[false,false]));results.hidden=true;render();});
 render();
