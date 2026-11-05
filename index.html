@@ -294,6 +294,13 @@
                             <h3 class="text-md font-bold text-gray-800 mb-1">โมดูล "คนใหม่"</h3>
                         -->
                             <p class="text-gray-500 text-sm mb-3">ยังไม่มีบัญชีใช่หรือไม่?</p>
+                        <button
+  type="button"
+  onclick="testAppsScriptConnection()"
+  class="w-full bg-gray-100 text-gray-800 border
+         border-gray-300 rounded-lg py-3 mb-4">
+  ทดสอบการเชื่อมต่อ Google Sheets
+</button>
                         <button onclick="renderSelectRole()" class="w-full bg-white text-dark border-2 border-dark font-bold py-2.5 rounded-lg hover:bg-gray-50 transition">
                             ลงทะเบียนสร้างบัญชีใหม่
                         </button>
@@ -1321,6 +1328,41 @@
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
+
+
+const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/mahidol.ac.th/s/AKfycbwfmGM2VcWovU8bnQ0vSJcud2wwZFgKkvOnWhwUrG2enLcL0ykzfrccsfIBVp1hYU1s/exec';
+
+async function testAppsScriptConnection() {
+  try {
+    showToast('กำลังทดสอบการเชื่อมต่อ...', 'info');
+
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'GET',
+      redirect: 'follow'
+    });
+
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status);
+    }
+
+    const result = await response.json();
+
+    if (
+      result.success === true &&
+      result.service === 'JobsForAll_Registration_API' &&
+      result.status === 'TEST_ONLY'
+    ) {
+      showToast('เชื่อมต่อ Apps Script สำเร็จ', 'success');
+    } else {
+      throw new Error('ข้อมูลตอบกลับไม่ตรงตามที่คาดหวัง');
+    }
+
+  } catch (error) {
+    console.error('Connection test failed:', error);
+    showToast('ทดสอบไม่สำเร็จ กรุณาตรวจสอบ Console', 'error');
+  }
+}
+
 
         // Initialize application on load
         window.onload = () => { 
